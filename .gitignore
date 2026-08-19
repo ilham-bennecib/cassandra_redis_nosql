@@ -1,0 +1,4 @@
+.env
+secure-connect-tmdb-platform.zip
+.ipynb_checkpoints/
+venv/
