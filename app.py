@@ -17,19 +17,22 @@ from cassandra.cluster import Cluster, ProtocolVersion
 from cassandra.auth import PlainTextAuthProvider
 import redis
 
+# set_page_config() doit être la toute première commande Streamlit du script,
+# avant même l'accès à st.secrets ci-dessous - sinon Streamlit lève une erreur.
+st.set_page_config(page_title="TMDB - Cassandra & Redis", page_icon="🎬", layout="wide")
+
 load_dotenv()
 
 # Sur Streamlit Community Cloud, il n'y a pas de fichier .env : les secrets sont
-# définis via l'interface web (onglet "Secrets") et exposés par st.secrets. On les
-# recopie dans os.environ pour que le reste du code (get_bundle_path, os.environ[...])
-# n'ait rien à changer, qu'on soit en local ou en déploiement.
-try:
-    for key, value in st.secrets.items():
-        os.environ.setdefault(key, str(value))
-except Exception:
-    pass  # pas de secrets.toml en local : .env pris en charge par load_dotenv() ci-dessus
-
-st.set_page_config(page_title="TMDB - Cassandra & Redis", page_icon="🎬", layout="wide")
+# définis via l'interface web (onglet "Secrets") et exposés par st.secrets. On ne
+# touche à st.secrets que si une variable clé manque déjà (donc jamais en local,
+# où .env suffit) - ça évite le message "No secrets found" de Streamlit en local.
+if "ASTRA_DB_APPLICATION_TOKEN" not in os.environ:
+    try:
+        for key, value in st.secrets.items():
+            os.environ.setdefault(key, str(value))
+    except Exception:
+        pass
 
 
 # ------------------------------------------------------------------
