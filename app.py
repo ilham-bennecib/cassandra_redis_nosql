@@ -19,6 +19,16 @@ import redis
 
 load_dotenv()
 
+# Sur Streamlit Community Cloud, il n'y a pas de fichier .env : les secrets sont
+# définis via l'interface web (onglet "Secrets") et exposés par st.secrets. On les
+# recopie dans os.environ pour que le reste du code (get_bundle_path, os.environ[...])
+# n'ait rien à changer, qu'on soit en local ou en déploiement.
+try:
+    for key, value in st.secrets.items():
+        os.environ.setdefault(key, str(value))
+except Exception:
+    pass  # pas de secrets.toml en local : .env pris en charge par load_dotenv() ci-dessus
+
 st.set_page_config(page_title="TMDB - Cassandra & Redis", page_icon="🎬", layout="wide")
 
 
