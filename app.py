@@ -310,7 +310,7 @@ elif page == "Nombre de films par année (Cassandra)":
 
 
 # ------------------------------------------------------------------
-# Page 6 : CRUD - démonstration en direct
+# Page 6 : CRUD - démonstration en direct (VERSION CORRIGÉE)
 # ------------------------------------------------------------------
 
 elif page == "CRUD - démonstration en direct":
@@ -332,33 +332,57 @@ elif page == "CRUD - démonstration en direct":
              weighted_rating, original_language, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """)
+        valeurs = {
+            "movie_id": TEST_MOVIE_ID, "title": "Mon Film Test (démo webapp)",
+            "director": "Réalisateur Test", "genres": ["Comedy"],
+            "release_year": 2024, "vote_average": 7.0,
+        }
         session.execute(insert_stmt, (
             TEST_MOVIE_ID, "Mon Film Test (démo webapp)", "Réalisateur Test",
             ["Acteur A", "Acteur B"], ["Comedy"], 2024, "2024-01-01", 100.0,
             1_000_000, 2_000_000, 5.0, 7.0, 42, 6.5, "fr", "Released",
         ))
-        st.success("Film test créé dans Cassandra (movies_by_id).")
+        st.success("Film test créé dans Cassandra (movies_by_id) :")
+        st.json(valeurs)  # <- on montre immédiatement ce qui vient d'être inséré
 
     if col2.button("2. Read"):
         rows = list(session.execute(
-            "SELECT movie_id, title, vote_average FROM movies_by_id WHERE movie_id = %s",
+            "SELECT movie_id, title, director, vote_average FROM movies_by_id WHERE movie_id = %s",
             (TEST_MOVIE_ID,),
         ))
         if rows:
-            st.json({"movie_id": rows[0].movie_id, "title": rows[0].title, "vote_average": rows[0].vote_average})
+            st.json({
+                "movie_id": rows[0].movie_id, "title": rows[0].title,
+                "director": rows[0].director, "vote_average": rows[0].vote_average,
+            })
         else:
             st.warning("Aucun film test trouvé - clique d'abord sur Create.")
 
     if col3.button("3. Update"):
-        session.execute(
-            "UPDATE movies_by_id SET vote_average = %s WHERE movie_id = %s",
-            (8.0, TEST_MOVIE_ID),
-        )
-        st.success("vote_average mis à jour à 8.0.")
+        avant = list(session.execute(
+            "SELECT vote_average FROM movies_by_id WHERE movie_id = %s", (TEST_MOVIE_ID,)
+        ))
+        if not avant:
+            st.warning("Aucun film test trouvé - clique d'abord sur Create.")
+        else:
+            ancienne_valeur = avant[0].vote_average
+            session.execute(
+                "UPDATE movies_by_id SET vote_average = %s WHERE movie_id = %s",
+                (8.0, TEST_MOVIE_ID),
+            )
+            # on relit pour confirmer que le changement est réellement passé, pas supposé
+            apres = session.execute(
+                "SELECT vote_average FROM movies_by_id WHERE movie_id = %s", (TEST_MOVIE_ID,)
+            ).one()
+            st.success(f"vote_average : **{ancienne_valeur}** → **{apres.vote_average}**")
 
     if col4.button("4. Delete"):
         session.execute("DELETE FROM movies_by_id WHERE movie_id = %s", (TEST_MOVIE_ID,))
+        verif = list(session.execute(
+            "SELECT * FROM movies_by_id WHERE movie_id = %s", (TEST_MOVIE_ID,)
+        ))
         st.success("Film test supprimé.")
+        st.caption(f"Relecture après suppression : {len(verif)} résultat(s) trouvé(s) (doit être 0).")
 
     st.markdown("---")
     st.caption(
